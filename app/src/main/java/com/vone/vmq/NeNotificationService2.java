@@ -179,11 +179,12 @@ public class NeNotificationService2  extends NotificationListenerService {
                                 addAppLog("💰 成功提取金额: " + money + "元，正在回调服务端...");
                                 appPush(2, Double.valueOf(money));
                             }else {
+                                final String finalContent = content; // 声明为final变量
                                 addAppLog("❌ 匹配到收款通知但无法提取金额！内容: " + content);
                                 Handler handlerThree=new Handler(Looper.getMainLooper());
                                 handlerThree.post(new Runnable(){
                                     public void run(){
-                                        Toast.makeText(getApplicationContext() ,"监听到支付宝消息但未匹配到金额！内容：" + content,Toast.LENGTH_LONG).show();
+                                        Toast.makeText(getApplicationContext() ,"监听到支付宝消息但未匹配到金额！内容：" + finalContent,Toast.LENGTH_LONG).show();
                                     }
                                 });
                             }
@@ -231,12 +232,8 @@ public class NeNotificationService2  extends NotificationListenerService {
                         });
                     }
                 }
-
-
-
             }
         }
-
     }
     //当移除一条消息的时候回调，sbn是被移除的消息
     @Override
@@ -354,5 +351,4 @@ public class NeNotificationService2  extends NotificationListenerService {
             Log.e(TAG, "添加应用日志失败: " + e.getMessage());
         }
     }
-
 }
