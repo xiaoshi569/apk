@@ -1,0 +1,87 @@
+name: Build V免签 APK
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 8
+      uses: actions/setup-java@v4
+      with:
+        java-version: '8'
+        distribution: 'temurin'
+
+    - name: Cache Gradle packages
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Clean project
+      run: ./gradlew clean
+
+    - name: Build Debug APK
+      run: ./gradlew assembleDebug
+
+    - name: Build Release APK
+      run: ./gradlew assembleRelease
+
+    - name: Upload Debug APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: vmq-debug-apk
+        path: app/build/outputs/apk/debug/app-debug.apk
+
+    - name: Upload Release APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: vmq-release-apk
+        path: app/build/outputs/apk/release/app-release-unsigned.apk
+
+    - name: Create Release
+      if: github.ref == 'refs/heads/main'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v1.0-${{ github.run_number }}
+        name: V免签 v1.0-${{ github.run_number }}
+        body: |
+          ## V免签自动构建版本
+
+          ### 新功能
+          - ✅ 支付宝监听优化
+          - 📱 内置日志查看器
+          - 🔧 支付宝调试工具
+
+          ### 下载说明
+          - **app-debug.apk**: 调试版本，推荐使用
+          - **app-release-unsigned.apk**: 发布版本（未签名）
+
+          ### 安装方法
+          1. 下载 app-debug.apk
+          2. 在手机上允许安装未知来源应用
+          3. 安装APK文件
+
+        files: |
+          app/build/outputs/apk/debug/app-debug.apk
+          app/build/outputs/apk/release/app-release-unsigned.apk
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
