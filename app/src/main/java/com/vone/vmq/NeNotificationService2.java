@@ -173,18 +173,30 @@ public class NeNotificationService2  extends NotificationListenerService {
                             (title!=null && (title.indexOf("收款")!=-1 || title.indexOf("到账")!=-1))){
 
                             addAppLog("🎯 匹配到支付宝收款关键词！");
+
+                            // 先尝试从内容中提取金额
                             String money = getMoney(content);
+
+                            // 如果内容中没有金额，尝试从标题中提取
+                            if (money == null && title != null) {
+                                money = getMoney(title);
+                                addAppLog("从标题中尝试提取金额: " + title);
+                            }
+
                             if (money!=null){
                                 Log.d(TAG, "onAccessibilityEvent: 匹配成功： 支付宝 到账 " + money);
                                 addAppLog("💰 成功提取金额: " + money + "元，正在回调服务端...");
                                 appPush(2, Double.valueOf(money));
                             }else {
                                 final String finalContent = content; // 声明为final变量
-                                addAppLog("❌ 匹配到收款通知但无法提取金额！内容: " + content);
+                                final String finalTitle = title; // 声明为final变量
+                                addAppLog("❌ 匹配到收款通知但无法提取金额！");
+                                addAppLog("标题: " + title);
+                                addAppLog("内容: " + content);
                                 Handler handlerThree=new Handler(Looper.getMainLooper());
                                 handlerThree.post(new Runnable(){
                                     public void run(){
-                                        Toast.makeText(getApplicationContext() ,"监听到支付宝消息但未匹配到金额！内容：" + finalContent,Toast.LENGTH_LONG).show();
+                                        Toast.makeText(getApplicationContext() ,"监听到支付宝消息但未匹配到金额！标题：" + finalTitle + " 内容：" + finalContent,Toast.LENGTH_LONG).show();
                                     }
                                 });
                             }
@@ -202,13 +214,24 @@ public class NeNotificationService2  extends NotificationListenerService {
                         addAppLog("微信通知内容: " + content);
                         if (title.equals("微信支付") || title.equals("微信收款助手") || title.equals("微信收款商业版")){
                             addAppLog("🎯 匹配到微信收款通知！");
+
+                            // 先尝试从内容中提取金额
                             String money = getMoney(content);
+
+                            // 如果内容中没有金额，尝试从标题中提取
+                            if (money == null && title != null) {
+                                money = getMoney(title);
+                                addAppLog("从微信标题中尝试提取金额: " + title);
+                            }
+
                             if (money!=null){
                                 Log.d(TAG, "onAccessibilityEvent: 匹配成功： 微信到账 "+ money);
                                 addAppLog("💰 成功提取金额: " + money + "元，正在回调服务端...");
                                 appPush(1,Double.valueOf(money));
                             }else{
                                 addAppLog("❌ 匹配到微信收款通知但无法提取金额！");
+                                addAppLog("微信标题: " + title);
+                                addAppLog("微信内容: " + content);
                                 Handler handlerThree=new Handler(Looper.getMainLooper());
                                 handlerThree.post(new Runnable(){
                                     public void run(){
