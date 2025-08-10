@@ -37,6 +37,11 @@ public class NeNotificationService2  extends NotificationListenerService {
     private Thread newThread = null;
     private PowerManager.WakeLock mWakeLock = null;
 
+    // 添加通知去重机制
+    private java.util.Set<String> processedNotifications = new java.util.HashSet<>();
+    private long lastProcessTime = 0;
+    private static final long MIN_PROCESS_INTERVAL = 2000; // 2秒内不重复处理相同通知
+
 
     //申请设备电源锁
     @SuppressLint("InvalidWakeLockTag")
@@ -121,28 +126,64 @@ public class NeNotificationService2  extends NotificationListenerService {
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
         Log.d(TAG, "接受到通知消息");
-        addAppLog("收到新通知");
 
-        SharedPreferences read = getSharedPreferences("vone", MODE_PRIVATE);
-        host = read.getString("host", "");
-        key = read.getString("key", "");
-
-
+        // 获取通知的基本信息
         Notification notification = sbn.getNotification();
         String pkg = sbn.getPackageName();
+        long currentTime = System.currentTimeMillis();
+
         if (notification != null) {
             Bundle extras = notification.extras;
             if (extras != null) {
                 String title = extras.getString(NotificationCompat.EXTRA_TITLE, "");
                 String content = extras.getString(NotificationCompat.EXTRA_TEXT, "");
+
+                // 创建通知唯一标识符
+                String notificationId = pkg + "_" + title + "_" + content;
+                String notificationHash = String.valueOf(notificationId.hashCode());
+
+                // 检查是否为重复通知
+                if (processedNotifications.contains(notificationHash)) {
+                    Log.d(TAG, "跳过重复通知: " + notificationHash);
+                    addAppLog("⚠️ 跳过重复通知");
+                    return;
+                }
+
+                // 检查时间间隔（防止短时间内重复处理）
+                if (currentTime - lastProcessTime < MIN_PROCESS_INTERVAL) {
+                    Log.d(TAG, "处理间隔过短，跳过通知");
+                    addAppLog("⚠️ 处理间隔过短，跳过");
+                    return;
+                }
+
+                // 添加到已处理列表
+                processedNotifications.add(notificationHash);
+                lastProcessTime = currentTime;
+
+                // 限制已处理通知列表大小（避免内存泄漏）
+                if (processedNotifications.size() > 100) {
+                    processedNotifications.clear();
+                    addAppLog("🔄 清理通知缓存");
+                }
+
+                addAppLog("✅ 处理新通知 ID: " + notificationHash.substring(0, 8));
+
+                SharedPreferences read = getSharedPreferences("vone", MODE_PRIVATE);
+                host = read.getString("host", "");
+                key = read.getString("key", "");
                 Log.d(TAG, "**********************");
                 Log.d(TAG, "包名:" + pkg);
                 Log.d(TAG, "标题:" + title);
                 Log.d(TAG, "内容:" + content);
+                Log.d(TAG, "通知时间:" + new java.util.Date(sbn.getPostTime()));
                 Log.d(TAG, "**********************");
 
-                // 记录通知到应用日志
-                addAppLog("通知详情 - 包名: " + pkg + ", 标题: " + title + ", 内容: " + content);
+                // 记录通知到应用日志（包含时间戳）
+                java.text.SimpleDateFormat timeFormat = new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault());
+                String notificationTime = timeFormat.format(new java.util.Date(sbn.getPostTime()));
+                addAppLog("📱 [" + notificationTime + "] 通知详情 - 包名: " + pkg);
+                addAppLog("📝 标题: " + title);
+                addAppLog("📄 内容: " + content);
 
                 // 专门记录支付宝相关的所有通知，便于调试
                 if (pkg.contains("alipay") || pkg.contains("Alipay") || title.contains("支付宝") || content.contains("支付宝")) {
