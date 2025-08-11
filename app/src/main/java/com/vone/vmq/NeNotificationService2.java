@@ -215,13 +215,14 @@ public class NeNotificationService2  extends NotificationListenerService {
 
                             addAppLog("🎯 匹配到支付宝收款关键词！");
 
-                            // 先尝试从内容中提取金额
-                            String money = getMoney(content);
+                            // 优先从标题中提取金额
+                            String money = getMoney(title);
+                            addAppLog("尝试从标题中提取金额: " + title);
 
-                            // 如果内容中没有金额，尝试从标题中提取
-                            if (money == null && title != null) {
-                                money = getMoney(title);
-                                addAppLog("从标题中尝试提取金额: " + title);
+                            // 如果标题中没有金额，再尝试从内容中提取
+                            if (money == null && content != null) {
+                                money = getMoney(content);
+                                addAppLog("尝试从内容中提取金额: " + content);
                             }
 
                             if (money!=null){
