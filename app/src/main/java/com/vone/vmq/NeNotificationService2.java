@@ -138,8 +138,8 @@ public class NeNotificationService2  extends NotificationListenerService {
                 String title = extras.getString(NotificationCompat.EXTRA_TITLE, "");
                 String content = extras.getString(NotificationCompat.EXTRA_TEXT, "");
 
-                // 创建通知唯一标识符
-                String notificationId = pkg + "_" + title + "_" + content;
+                // 创建通知唯一标识符, 加入时间戳防止内容一致导致误判
+                String notificationId = pkg + "_" + title + "_" + content + "_" + sbn.getPostTime();
                 String notificationHash = String.valueOf(notificationId.hashCode());
 
                 // 检查是否为重复通知
@@ -149,16 +149,8 @@ public class NeNotificationService2  extends NotificationListenerService {
                     return;
                 }
 
-                // 检查时间间隔（防止短时间内重复处理）
-                if (currentTime - lastProcessTime < MIN_PROCESS_INTERVAL) {
-                    Log.d(TAG, "处理间隔过短，跳过通知");
-                    addAppLog("⚠️ 处理间隔过短，跳过");
-                    return;
-                }
-
                 // 添加到已处理列表
                 processedNotifications.add(notificationHash);
-                lastProcessTime = currentTime;
 
                 // 限制已处理通知列表大小（避免内存泄漏）
                 if (processedNotifications.size() > 100) {
@@ -181,9 +173,6 @@ public class NeNotificationService2  extends NotificationListenerService {
                 // 记录通知到应用日志（包含时间戳）
                 java.text.SimpleDateFormat timeFormat = new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault());
                 String notificationTime = timeFormat.format(new java.util.Date(sbn.getPostTime()));
-                addAppLog("📱 [" + notificationTime + "] 通知详情 - 包名: " + pkg);
-                addAppLog("📝 标题: " + title);
-                addAppLog("📄 内容: " + content);
 
                 // 专门记录支付宝相关的所有通知，便于调试
                 if (pkg.contains("alipay") || pkg.contains("Alipay") || title.contains("支付宝") || content.contains("支付宝")) {
@@ -200,8 +189,9 @@ public class NeNotificationService2  extends NotificationListenerService {
                 if (pkg.equals("com.eg.android.AlipayGphone") || pkg.equals("com.alipay.android.app")){
                     addAppLog("✅ 检测到支付宝通知 - 包名: " + pkg);
                     if (content!=null && !content.equals("")) {
+                        addAppLog("📝 标题: " + title);
+                        addAppLog("📄 内容: " + content);
                         Log.d(TAG, "支付宝通知 - 标题: " + title + ", 内容: " + content);
-                        addAppLog("支付宝通知内容: " + content);
 
                         // 扩展支付宝收款关键词匹配
                         if (content.indexOf("通过扫码向你付款")!=-1 ||
@@ -253,7 +243,8 @@ public class NeNotificationService2  extends NotificationListenerService {
                 }else if(pkg.equals("com.tencent.mm")){
                     addAppLog("✅ 检测到微信通知");
                     if (content!=null && !content.equals("")){
-                        addAppLog("微信通知内容: " + content);
+                        addAppLog("📝 标题: " + title);
+                        addAppLog("📄 内容: " + content);
                         if (title.equals("微信支付") || title.equals("微信收款助手") || title.equals("微信收款商业版")){
                             addAppLog("🎯 匹配到微信收款通知！");
 
